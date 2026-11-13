@@ -211,7 +211,7 @@
     }
     return false;
   }
-  function viewerMainImg(viewer) {
+  function viewerMainImg(viewer, strictOnly) {
     const pick = (strict) => {
       let best = null, area = 0;
       viewer.querySelectorAll('img').forEach((i) => {
@@ -229,7 +229,7 @@
       });
       return best;
     };
-    return pick(true) || pick(false);
+    return strictOnly ? pick(true) : (pick(true) || pick(false));
   }
 
   function findBtn(root, re) {
@@ -290,18 +290,29 @@
     return false;
   }
 
+  const isFlat = (t) => {
+    if (!t) return false;
+    let m = 0; for (let i = 0; i < t.length; i++) m += t[i];
+    m /= t.length;
+    let v = 0; for (let i = 0; i < t.length; i++) v += (t[i] - m) * (t[i] - m);
+    return Math.sqrt(v / t.length) < 7;   // blank / not-yet-loaded / solid-colour picture
+  };
+
   async function waitChange(viewer, prevSrc, timeout = 4500) {
     const t0 = Date.now();
+    const changed = (img) => img && (img.currentSrc || img.src) !== prevSrc && img.complete && img.naturalWidth > 0;
     while (Date.now() - t0 < timeout) {
       await sleep(150);
       const v = findViewer() || viewer;
-      const img = viewerMainImg(v);
-      if (img && (img.currentSrc || img.src) !== prevSrc && img.complete && img.naturalWidth > 0) {
-        await sleep(200); // let hi-res replace the placeholder
-        return viewerMainImg(findViewer() || v);
+      const img = viewerMainImg(v, true);          // real photo only (big enough, not blurred, not a thumbnail)
+      if (changed(img)) {
+        await sleep(250);                          // let the hi-res replace anything that was still loading
+        return viewerMainImg(findViewer() || v, true) || img;
       }
     }
-    return null;
+    // timed out: maybe the photo really is small - accept it now
+    const last = viewerMainImg(findViewer() || viewer);
+    return changed(last) ? last : null;
   }
 
   const snapImgs = () => new Map([...document.images].map((i) => [i, dispSize(i)]));
@@ -363,12 +374,26 @@
     const log = [];
     const L = (msg, extra) => { log.push({ t: Math.round(performance.now()), msg, ...(extra || {}) }); console.log('[i2p]', msg, extra || ''); };
     const isWA = /whatsapp\.com$/.test(location.hostname);
-    const isChat = isWA || /(^|\.)messenger\.com$/.test(location.hostname) || (/facebook\.com$/.test(location.hostname) && /^\/messages/.test(location.pathname));
+    const isTG = /(^|\.)telegram\.org$/.test(location.hostname);
+    const isChat = isWA || isTG || /(^|\.)messenger\.com$/.test(location.hostname) || (/facebook\.com$/.test(location.hostname) && /^\/messages/.test(location.pathname));
     let limit = 0;
-    if (isWA) {
-      const ans = window.prompt('WhatsApp: how many photos to capture, starting from this one?\n(leave empty to capture everything until the end of the chat media)', '10');
+    if (isTG) {
+      const direct = await captureAlbumDirect(img, L);
+      if (direct !== null) return direct;
+    }
+    let albumStart = null, albumThumbs = null, albumCount = 0;
+    if (isWA || isTG) {
+      const alb = isTG ? albumInfo(img) : null;
+      const def = alb ? alb.count : (isWA ? 10 : 1);
+      const where = alb ? 'an album of ' + alb.count + ' photos was detected; capturing starts at its first photo' : 'starting from this photo';
+      const ans = window.prompt((isTG ? 'Telegram' : 'WhatsApp') + ': how many photos to capture?\n(' + where + ')\nLeave empty = everything until the end of the chat media.', String(def));
       if (ans === null) return;
       limit = Math.max(0, parseInt(ans, 10) || 0);
+      if (alb && limit) {
+        albumStart = alb.first;
+        albumCount = alb.count;
+        albumThumbs = alb.imgs.map(thumbOf).filter(Boolean);
+      }
     }
     L('start', { tiles: tiles.length, expected, post: describe(post) });
     const urls = [];
@@ -380,7 +405,7 @@
     let viewer = findViewer();
     let openedByUs = false, pageMode = false, viaTrusted = false;
     if (!viewer) {
-      const first = isChat ? img : (tiles[0] || img);
+      const first = albumStart || (isChat ? img : (tiles[0] || img));
       first.scrollIntoView({ block: 'center' });
       await sleep(250);
       const clickTarget = first.closest('a, button, [role="button"], [role="link"]') || first;
@@ -447,11 +472,37 @@
       const total = usedStrip ? 0 : readTotal(findViewer() || viewer);
       if (total > 1) expected = total;
       const ids = new Set();
+      const thumbs = [];
       const ordered = [];
+      const matched = new Set();
+      let strangerRun = 0;
       for (let i = 0; i < 80 && cur; i++) {
+        // a flat picture is usually Telegram/WhatsApp's placeholder: give the real photo time to arrive
+        for (let w = 0; w < 8 && isFlat(thumbOf(cur)); w++) {
+          await sleep(500);
+          cur = viewerMainImg(findViewer() || viewer, true) || cur;
+        }
         const u = bestSrc(cur), k = keyOf(u);
-        if (ids.has(k)) { L('wrapped around, stopping', { at: i }); break; }
-        ids.add(k); ordered.push(u);
+        let repeat = ids.has(k);
+        if (!repeat && /^(blob:|data:)/.test(u)) {
+          const t = thumbOf(cur);
+          if (t) { repeat = !isFlat(t) && thumbs.some((x) => madiff(x, t) < 1.5); if (!repeat) thumbs.push(t); }
+        }
+        if (repeat) { L('repeat image (wrapped around), stopping', { at: i }); break; }
+        ids.add(k);
+        let member = true;
+        if (albumThumbs && albumThumbs.length) {
+          const t = thumbOf(cur);
+          let bi = -1, bd = 1e9;
+          if (t) albumThumbs.forEach((x, ix) => { const d = madiff(x, t); if (d < bd) { bd = d; bi = ix; } });
+          member = !!t && bd < 26;
+          if (i === 0 && !member) { albumThumbs = null; member = true; L('album check disabled (first photo did not match the chat thumbnails)', { bd: Math.round(bd) }); }
+          else if (member) matched.add(bi);
+          else L('photo is not part of the album', { bd: Math.round(bd) });
+        }
+        if (member) { strangerRun = 0; ordered.push(u); }
+        else if (++strangerRun >= 2) { L('left the album, stopping'); break; }
+        if (albumThumbs && albumCount && matched.size >= albumCount) { L('all album photos found'); break; }
         if (limit && ordered.length >= limit) { L('reached requested count'); break; }
         if (expected > 1 && ordered.length >= expected) { L('reached expected count'); break; }
         toast('Capturing images… ' + ordered.length + (expected > 1 ? ' / ' + expected : ''), true);
@@ -461,18 +512,33 @@
         let nimg = null, how = '';
         const diag = nxt ? { rect: (() => { const r = nxt.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)]; })(), point: pointOn(nxt) } : null;
         const modes = viaTrusted ? ['trusted', 'synthetic', 'key'] : ['synthetic', 'trusted', 'key'];
+        const sigNow = () => {
+          const vv = findViewer() || viewer;
+          const im = viewerMainImg(vv, true) || viewerMainImg(vv);
+          const cnt = ((vv.innerText || '').slice(0, 3000).match(/\d{1,3}\s*(?:of|\/)\s*\d{1,3}/) || [''])[0];
+          return (im ? (im.currentSrc || im.src).slice(-60) : '') + '|' + cnt;
+        };
+        const sigBefore = sigNow();
         for (const mode of modes) {
           if (mode === 'trusted') { if (nxt) await trustedClick(nxt); else await trustedKey('ArrowRight'); }
           else if (mode === 'key') { await trustedKey('ArrowRight'); }
           else if (nxt) realClick(nxt, true); else key('ArrowRight');
           how = mode + (nxt ? ':button' : ':key');
-          nimg = await waitChange(v, prevSrc, mode === 'synthetic' ? 3500 : 4500);
+          nimg = await waitChange(v, prevSrc, 4500);
           if (nimg) break;
+          // The viewer already started moving (slow load): wait for it, but do NOT click again,
+          // a second click would skip a photo.
+          if (sigNow() !== sigBefore) {
+            how += ':slow';
+            nimg = await waitChange(v, prevSrc, 14000);
+            break;
+          }
         }
         const now = viewerMainImg(findViewer() || viewer);
         L('step ' + ordered.length, { how, ok: !!nimg, diag, before: prevSrc.slice(-40), after: now ? (now.currentSrc || now.src).slice(-40) : null });
         if (!nimg) break;
         cur = nimg;
+        await sleep(350);   // let the viewer settle before reading the next photo
       }
       // keep the post's own order: start from the image that is the first tile
       const firstKey = tiles[0] ? keyOf(bestSrc(tiles[0])) : null;
@@ -522,6 +588,73 @@
     }
     return r;
   }
+
+  // Telegram groups an album in one message bubble (max 10 items): find it and its first photo.
+  function albumInfo(img) {
+    const box = img.closest('.album-items, .Album, [class*="album" i]');
+    if (!box) return null;
+    const imgs = [...box.querySelectorAll('img')].filter((i) => Math.max(i.getBoundingClientRect().width, i.getBoundingClientRect().height) >= 60);
+    const items = Math.max(
+      box.querySelectorAll('.album-item').length,
+      box.querySelectorAll('[class*="album-item" i]').length,
+      box.querySelectorAll('.media-inner, .media-container, [class*="media-inner" i]').length,
+      box.querySelectorAll('canvas, video').length);
+    const count = Math.max(items, imgs.length);
+    if (count < 2 || count > 10) return null;
+    imgs.sort((a, b) => { const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return Math.abs(ra.top - rb.top) > 8 ? ra.top - rb.top : ra.left - rb.left; });
+    return { box, count, first: imgs[0] || img, imgs };
+  }
+
+  // Telegram Web: an album is ONE message (div.Album / .album-items); each .album-item already holds the
+  // full-size photo as <img class="full-media" src="blob:...">. Read them in DOM order = album order.
+  async function captureAlbumDirect(img, L) {
+    const box = img.closest('.Album, .album-items');
+    if (!box) return null;
+    const items = [...box.querySelectorAll('.album-item')];
+    if (items.length < 2) return null;
+    const photoOf = (it) => {
+      const cands = [...it.querySelectorAll('img')].filter((i) => !/^data:image\/svg/.test(i.currentSrc || i.src || ''));
+      return cands.find((i) => /full-media|media-photo|full-image/.test(i.className)) || cands.sort((a, b) => (b.naturalWidth * b.naturalHeight) - (a.naturalWidth * a.naturalHeight))[0] || null;
+    };
+    const ready = (i) => i && i.complete && Math.max(i.naturalWidth, i.naturalHeight) >= 200 && !/\bthumb\b|blur/.test(i.className);
+    box.scrollIntoView({ block: 'center' });
+    L('album message found', { items: items.length });
+    toast('Telegram album: reading ' + items.length + ' photos…', true);
+    const t0 = Date.now();
+    let imgs = items.map(photoOf);
+    // photos load when they scroll into view: wait for them (up to 10s)
+    while (Date.now() - t0 < 10000 && !imgs.every(ready)) {
+      await sleep(400);
+      imgs = items.map(photoOf);
+    }
+    const good = imgs.filter(ready);
+    const urls = [];
+    const seen = new Set();
+    good.forEach((i) => { const u = i.currentSrc || i.src; if (u && !seen.has(u)) { seen.add(u); urls.push(u); } });
+    L('album read directly', { items: items.length, loaded: good.length, urls: urls.length });
+    if (!urls.length) return null;
+    lastPost = box.closest('.Message') || box;
+    const r = await sendEntries(urls);
+    if (good.length < items.length) {
+      toast('Added ' + good.length + ' of ' + items.length + ' photos: the rest were not loaded yet. Scroll that album into view for a moment, then try again.', true);
+    }
+    return r || {};
+  }
+
+  // 32x32 grayscale fingerprint of what the image really looks like (URLs of blob:/data: images change every time).
+  function thumbOf(img) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 32; c.height = 32;
+      const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0, 32, 32);
+      const d = g.getImageData(0, 0, 32, 32).data;
+      const t = new Uint8Array(1024);
+      for (let i = 0; i < 1024; i++) t[i] = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) | 0;
+      return t;
+    } catch (e) { return null; }
+  }
+  function madiff(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length; }
 
   function imgId(u) {
     const m = /\/dms\/image\/(?:v2\/)?([A-Za-z0-9_-]+)\//.exec(u);

@@ -92,11 +92,45 @@ function keyOfUrl(u) {
   return m ? m[1] : u;
 }
 
+// 48x48 grayscale fingerprint: the same photo arrives under different blob:/CDN URLs, so compare content.
+async function sigOfBlob(blob) {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const c = new OffscreenCanvas(48, 48);
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.drawImage(bmp, 0, 0, 48, 48);
+    bmp.close();
+    const d = g.getImageData(0, 0, 48, 48).data;
+    const t = new Uint8Array(2304);
+    for (let i = 0; i < 2304; i++) t[i] = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) | 0;
+    return t;
+  } catch (e) { return null; }
+}
+function flatSig(t) {
+  let m = 0; for (let i = 0; i < t.length; i++) m += t[i];
+  m /= t.length;
+  let v = 0; for (let i = 0; i < t.length; i++) v += (t[i] - m) * (t[i] - m);
+  return Math.sqrt(v / t.length) < 9;
+}
+function sameSig(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  if (flatSig(a) || flatSig(b)) return false;
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+  return s / a.length < 1.2;
+}
+
 async function addUrls(entries, meta) {
   const existing = await DB.getItems();
   const seen = new Set(existing.map((i) => keyOfUrl(i.url)));
   let order = existing.length ? Math.max(...existing.map((i) => i.order)) + 1 : 0;
   let added = 0, failed = 0, dup = 0;
+  // fingerprints of what is already in the basket (computed once for old items)
+  const sigs = [];
+  for (const it of existing) {
+    if (!it.sig) { it.sig = await sigOfBlob(it.blob); if (it.sig) await DB.putItem(it); }
+    if (it.sig) sigs.push(it.sig);
+  }
   for (const e of entries) {
     if (seen.has(keyOfUrl(e.url))) { dup++; continue; }
     try {
@@ -107,8 +141,11 @@ async function addUrls(entries, meta) {
         const bmp = await createImageBitmap(blob);
         const mx = Math.max(bmp.width, bmp.height), mn = Math.min(bmp.width, bmp.height);
         bmp.close();
-        if (mx < 400 || mn < 100) { failed++; continue; }
+        if (mx < 240 || mn < 80) { failed++; continue; }
       } catch (e) { /* undecodable in worker: keep it, editor will skip if bad */ }
+      const sig = await sigOfBlob(blob);
+      if (sig && sigs.some((x) => sameSig(x, sig))) { dup++; continue; }
+      if (sig) sigs.push(sig);
       await DB.putItem({
         id: crypto.randomUUID(),
         url: e.url,
@@ -116,6 +153,7 @@ async function addUrls(entries, meta) {
         order: order++,
         meta: meta || {},
         ts: Date.now(),
+        sig,
       });
       seen.add(keyOfUrl(e.url));
       added++;
