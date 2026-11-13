@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Image to PDF – Editor</title>
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">📄 Image to PDF Scanner</div>
+  <button id="btnAdd" title="Add images from your computer (you can also drag & drop or paste)">＋ Add images</button>
+  <input type="file" id="fileInput" accept="image/*" multiple hidden>
+  <button id="btnSelAll">Select all</button>
+  <button id="btnSelNone">Select none</button>
+  <button id="btnDelSel" class="danger">Delete selected</button>
+  <button id="btnClear" class="danger" title="Remove every image from the basket">Clear basket</button>
+  <button id="btnBlank" title="Find pages that look empty">Find blank pages</button>
+  <button id="btnAutoAll" title="Reset every page to auto crop + enhance">✨ Auto-enhance all</button>
+  <span class="spacer"></span>
+  <button id="btnHistory">🕘 History</button>
+  <button id="btnSettings">⚙ Settings</button>
+</header>
+
+<main>
+  <aside id="thumbs">
+    <div id="thumbHead"><span id="count">0 pages</span> <span class="muted">· drag to reorder</span></div>
+    <div id="thumbList"></div>
+  </aside>
+
+  <section id="stage">
+    <div id="stageBar">
+      <button id="btnPrev" title="Previous page (↑)">◀</button>
+      <span id="pageLabel">–</span>
+      <button id="btnNext" title="Next page (↓)">▶</button>
+      <span class="sep"></span>
+      <button id="btnRotL" title="Rotate left">⟲</button>
+      <button id="btnRotR" title="Rotate right">⟳</button>
+      <button id="btnCrop" title="Adjust the crop corners manually">✂ Crop / perspective</button>
+      <button id="btnResetPage" title="Back to auto settings for this page">Reset page</button>
+      <button id="btnCompare" title="Hold to see the original">👁 Hold: original</button>
+      <button id="btnCopyImg" title="Copy this page as an image">⧉ Copy image</button>
+      <button id="btnDelPage" class="danger">🗑 Delete page</button>
+    </div>
+    <div id="canvasWrap">
+      <div id="empty">
+        <h2>Your basket is empty</h2>
+        <p>Go to LinkedIn / Facebook, hover an image and click <b>Whole post</b>,<br>
+        or use the toolbar icon. You can also drop images here.</p>
+      </div>
+      <canvas id="preview" hidden></canvas>
+      <div id="busy" hidden>Processing…</div>
+    </div>
+    <div id="info" class="muted"></div>
+  </section>
+
+  <aside id="panel">
+    <h3>Page enhancement</h3>
+    <div class="seg" id="scope">
+      <label><input type="radio" name="scope" value="page" checked> This page</label>
+      <label><input type="radio" name="scope" value="all"> All pages</label>
+    </div>
+
+    <label class="f">Look
+      <select id="filter">
+        <option value="original">Original</option>
+        <option value="enhanced">Enhanced colour</option>
+        <option value="magic">Magic colour (shadow-free)</option>
+        <option value="scan">Scan B&amp;W (documents)</option>
+        <option value="gray">Grayscale</option>
+      </select>
+    </label>
+    <label class="c"><input type="checkbox" id="autocrop"> Auto crop edges &amp; fix perspective</label>
+    <label class="c"><input type="checkbox" id="deskew"> Straighten tilted text (deskew)</label>
+    <label class="c"><input type="checkbox" id="shadow"> Remove shadows / even out light</label>
+    <label class="c"><input type="checkbox" id="upscale"> Smart upscale low-resolution (sharpen)</label>
+    <label class="f">Brightness <span id="brVal" class="muted">0</span>
+      <input type="range" id="brightness" min="-60" max="60" value="0"></label>
+    <label class="f">Contrast <span id="ctVal" class="muted">0</span>
+      <input type="range" id="contrast" min="-50" max="80" value="0"></label>
+
+    <h3>PDF options</h3>
+    <label class="f">File name <input type="text" id="fileName" placeholder="my-document"></label>
+    <div class="grid2">
+      <label class="f">Page size
+        <select id="pageSize">
+          <option value="a4">A4</option><option value="letter">Letter</option>
+          <option value="legal">Legal</option><option value="fit">Fit to image</option>
+        </select></label>
+      <label class="f">Orientation
+        <select id="orient">
+          <option value="auto">Auto</option><option value="p">Portrait</option><option value="l">Landscape</option>
+        </select></label>
+      <label class="f">Margin
+        <select id="margin"><option value="0">None</option><option value="14">Small</option><option value="28">Medium</option><option value="48">Large</option></select></label>
+      <label class="f">File size
+        <select id="quality">
+          <option value="high">High quality</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="small">Small (WhatsApp/email)</option>
+        </select></label>
+    </div>
+    <label class="c"><input type="checkbox" id="ocrOn"> Make text searchable (OCR)</label>
+    <label class="f" id="ocrLangRow">OCR language
+      <select id="ocrLang">
+        <option value="eng">English</option>
+        <option value="ben">Bangla</option>
+        <option value="eng+ben">English + Bangla</option>
+        <option value="hin">Hindi</option>
+        <option value="ara">Arabic</option>
+        <option value="spa">Spanish</option>
+        <option value="fra">French</option>
+        <option value="deu">German</option>
+      </select></label>
+    <label class="c"><input type="checkbox" id="pageNums"> Page numbers</label>
+    <div class="grid2">
+      <label class="f">Watermark <input type="text" id="watermark" placeholder="e.g. CONFIDENTIAL"></label>
+      <label class="f">Opacity <input type="range" id="wmOpacity" min="5" max="60" value="15"></label>
+    </div>
+    <label class="f">Password (optional) <input type="password" id="password" autocomplete="new-password" placeholder="leave empty for none"></label>
+
+    <div class="actions">
+      <button id="btnPdf" class="primary big">⬇ Download PDF</button>
+      <button id="btnDrive" title="Upload the PDF to Google Drive (set up in Settings)">☁ Save to Google Drive</button>
+      <div class="grid2">
+        <button id="btnZipPng">ZIP · PNG</button>
+        <button id="btnZipJpg">ZIP · JPG</button>
+      </div>
+      <button id="btnTxt" title="Run OCR and download the text">📝 Export text (OCR .txt)</button>
+      <div class="muted" id="exportHint">Exports the ticked pages (or all if none ticked).</div>
+    </div>
+  </aside>
+</main>
+
+<div id="progress" hidden>
+  <div class="card">
+    <div id="progText">Working…</div>
+    <div class="bar"><div id="progBar"></div></div>
+    <button id="progCancel">Cancel</button>
+  </div>
+</div>
+
+<div id="cropModal" class="modal" hidden>
+  <div class="card wide">
+    <div class="row between"><b>Drag the corners to match the page edges</b>
+      <span><button id="cropAuto">Auto-detect</button> <button id="cropFull">Full image</button></span></div>
+    <div id="cropWrap"><canvas id="cropCanvas"></canvas></div>
+    <div class="row end"><button id="cropCancel">Cancel</button> <button id="cropApply" class="primary">Apply crop</button></div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal" hidden>
+  <div class="card">
+    <div class="row between"><b>Export history</b><button id="histClose">Close</button></div>
+    <div id="histList"></div>
+  </div>
+</div>
+
+<div id="settingsModal" class="modal" hidden>
+  <div class="card">
+    <div class="row between"><b>Settings</b><button id="setClose">Close</button></div>
+    <label class="f">Theme
+      <select id="theme"><option value="auto">Match system</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <label class="f">Google OAuth Client ID (for “Save to Google Drive”)
+      <input type="text" id="clientId" placeholder="xxxx.apps.googleusercontent.com"></label>
+    <div class="muted small">Create a “Web application” OAuth client in Google Cloud Console, enable the Drive API, and add this redirect URI:<br>
+      <code id="redirectUri"></code></div>
+    <div class="row end"><button id="setSave" class="primary">Save</button></div>
+  </div>
+</div>
+
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/tesseract.min.js"></script>
+<script src="db.js"></script>
+<script src="process.js"></script>
+<script src="export.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+:root {
+  --bg: #f4f6fa; --panel: #ffffff; --text: #111827; --muted: #6b7280; --border: #d9dee7;
+  --accent: #2563eb; --accent-text: #ffffff; --danger: #dc2626; --hover: #eef2f9; --sel: #dbeafe;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --panel: #171e28; --text: #e5e9f0; --muted: #94a0b3; --border: #2a3441;
+    --accent: #3b82f6; --danger: #f87171; --hover: #1f2937; --sel: #1e3a5f;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --panel: #171e28; --text: #e5e9f0; --muted: #94a0b3; --border: #2a3441;
+  --accent: #3b82f6; --danger: #f87171; --hover: #1f2937; --sel: #1e3a5f;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+button, select, input, textarea {
+  font: inherit; color: var(--text); background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+}
+button { cursor: pointer; }
+button:hover { background: var(--hover); }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.primary:hover { filter: brightness(1.1); }
+button.danger { color: var(--danger); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
+input[type="range"] { padding: 0; width: 100%; }
+label { display: block; }

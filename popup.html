@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="theme.css">
+<style>
+  body { width: 290px; padding: 14px; }
+  h1 { font-size: 15px; margin: 0 0 10px; }
+  button.big { width: 100%; text-align: left; margin-bottom: 7px; padding: 10px 12px; }
+  .small { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  #count { background: var(--accent); color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>📄 Image to PDF Scanner</h1>
+  <button class="big" id="post">📌 Capture whole post (all images)</button>
+  <button class="big" id="drag">▭ Drag-select images on page</button>
+  <button class="big" id="all">🖼 Add all large images on page</button>
+  <button class="big primary" id="editor"><span class="row"><span>🗂 Open basket &amp; editor</span><span id="count">0</span></span></button>
+  <button class="big" id="inspect">🔍 Inspect page (debug report)</button>
+  <div class="small">Tip: hover over any image to get a <b>＋ PDF</b> / <b>Whole post</b> button.<br>
+  Shortcuts: Alt+Shift+C capture post · Alt+Shift+S drag-select · Alt+Shift+E editor</div>
+<script src="popup.js"></script>
+</body>
+</html>
