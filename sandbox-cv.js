@@ -201,6 +201,35 @@
     return out;
   }
 
+  // Enlarge a low-resolution image and win back edge contrast.
+  // The enlarged edges are exactly as soft as the original ones, so an unsharp mask whose radius scales with the
+  // enlargement acts like a simple deconvolution; a second fine pass crisps thin strokes (text, diagram lines).
+  function hdUpscale(cv, m, target) {
+    const mx = Math.max(m.cols, m.rows);
+    const f = Math.min(4, target / mx);
+    if (f <= 1.05) return m;
+    // edge-preserving denoise BEFORE enlarging, so the sharpening below does not amplify photo noise
+    try {
+      const rgb = new cv.Mat(), dn = new cv.Mat();
+      cv.cvtColor(m, rgb, cv.COLOR_RGBA2RGB);
+      cv.bilateralFilter(rgb, dn, 7, 38, 5);
+      cv.cvtColor(dn, m, cv.COLOR_RGB2RGBA);
+      rgb.delete(); dn.delete();
+    } catch (e) { /* not available: skip */ }
+    const u = new cv.Mat();
+    cv.resize(m, u, new cv.Size(Math.round(m.cols * f), Math.round(m.rows * f)), 0, 0, cv.INTER_CUBIC);
+    m.delete();
+    const blur = new cv.Mat();
+    // strength grows with the enlargement: a 1.5x bump needs far less deblurring than a 4x one
+    const a = Math.min(1, 0.35 + (f - 1) * 0.4);
+    cv.GaussianBlur(u, blur, new cv.Size(0, 0), Math.max(1.0, 0.75 * f));
+    cv.addWeighted(u, 1 + a, blur, -a, 0, u);
+    cv.GaussianBlur(u, blur, new cv.Size(0, 0), 0.8);
+    cv.addWeighted(u, 1 + 0.5 * a, blur, -0.5 * a, 0, u);
+    blur.delete();
+    return u;
+  }
+
   function unsharp(cv, m, amount) {
     const blur = new cv.Mat();
     cv.GaussianBlur(m, blur, new cv.Size(0, 0), 1.2);
@@ -218,26 +247,31 @@
       return m;
     }
     if (filter === 'enhanced') {
-      // contrast-limited equalisation on luminance + mild sharpen
-      const rgb = new cv.Mat(), lab = new cv.Mat();
+      // Clean + clear, never "dirty": gentle denoise -> auto levels (paper becomes white, ink stays dark) -> mild sharpen.
+      // (No CLAHE: it exaggerates noise and turns grey paper blotchy.)
+      let rgb = new cv.Mat();
       cv.cvtColor(m, rgb, cv.COLOR_RGBA2RGB);
-      cv.cvtColor(rgb, lab, cv.COLOR_RGB2Lab);
-      const ch = new cv.MatVector();
-      cv.split(lab, ch);
-      const L = ch.get(0);
-      try {
-        const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
-        clahe.apply(L, L);
-        clahe.delete();
-      } catch (e) {
-        cv.normalize(L, L, 0, 255, cv.NORM_MINMAX);
-      }
-      ch.set(0, L);
-      cv.merge(ch, lab);
-      cv.cvtColor(lab, rgb, cv.COLOR_Lab2RGB);
+      try { const t = new cv.Mat(); cv.bilateralFilter(rgb, t, 5, 22, 5); rgb.delete(); rgb = t; } catch (e) { /* not in this build */ }
+      const g = new cv.Mat();
+      cv.cvtColor(rgb, g, cv.COLOR_RGB2GRAY);
+      const hist = new Uint32Array(256);
+      const gd = g.data;
+      let n = 0;
+      for (let i = 0; i < gd.length; i += 3) { hist[gd[i]]++; n++; }
+      g.delete();
+      const pct = (p) => { let c = 0; const t = n * p; for (let v = 0; v < 256; v++) { c += hist[v]; if (c >= t) return v; } return 255; };
+      const med = pct(0.5);
+      let near = 0;
+      for (let v = Math.max(0, med - 28); v <= Math.min(255, med + 28); v++) near += hist[v];
+      const docLike = near / n > 0.45 && med >= 110;          // mostly paper / slide background
+      let low = Math.min(80, pct(0.01));
+      let high = docLike ? Math.min(255, med + 10) : Math.max(170, pct(0.995));
+      if (high - low < 60) { low = Math.max(0, high - 60); }
+      const alpha = 255 / (high - low), beta = -low * alpha;
+      rgb.convertTo(rgb, -1, alpha, beta);
       cv.cvtColor(rgb, m, cv.COLOR_RGB2RGBA);
-      rgb.delete(); lab.delete(); ch.delete(); L.delete();
-      unsharp(cv, m, 0.5);
+      rgb.delete();
+      unsharp(cv, m, 0.45);
       return m;
     }
     if (filter === 'magic') {
@@ -322,6 +356,8 @@
         const d = deskew(cv, m);
         if (d) { m.delete(); m = d; }
       }
+      // 3b. HD upscale of low-resolution pages
+      if (s.upscale) m = hdUpscale(cv, m, Math.min(2400, maxDim));
       // 4. optional shadow removal (the magic & scan filters already do it)
       if (s.shadow && s.filter !== 'magic' && s.filter !== 'scan') {
         const o = removeShadows(cv, m); m.delete(); m = o;
@@ -332,17 +368,6 @@
       if (s.brightness || s.contrast) {
         const alpha = 1 + (s.contrast || 0) / 100, beta = (s.brightness || 0) * 1.5;
         m.convertTo(m, -1, alpha, beta);
-      }
-      // 7. upscale low-res
-      if (s.upscale) {
-        const mx = Math.max(m.cols, m.rows);
-        const f = Math.min(3, 2000 / mx);
-        if (f > 1.05) {
-          const u = new cv.Mat();
-          cv.resize(m, u, new cv.Size(Math.round(m.cols * f), Math.round(m.rows * f)), 0, 0, cv.INTER_LANCZOS4);
-          m.delete(); m = u;
-          unsharp(cv, m, 0.7);
-        }
       }
       // 8. cap size
       const mx = Math.max(m.cols, m.rows);

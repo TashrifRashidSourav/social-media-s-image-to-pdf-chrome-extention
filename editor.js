@@ -1,6 +1,6 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const DEFAULT_S = { rotate: 0, quad: null, autocrop: true, deskew: false, shadow: false, filter: 'enhanced', brightness: 0, contrast: 0, upscale: false };
+  const DEFAULT_S = { rotate: 0, quad: null, autocrop: true, deskew: false, shadow: false, filter: 'enhanced', brightness: 0, contrast: 0, upscale: true };
   const QUALITY = {
     high: { maxDim: 3200, q: 0.92 },
     balanced: { maxDim: 2400, q: 0.85 },
@@ -161,7 +161,7 @@
       const p = thumbQueue.shift();
       if (!pages.includes(p)) continue;
       try {
-        const r = await Processor.run(p.thumbSrc, p.s, { maxDim: 360, cache: p.cache, preMax: 420 });
+        const r = await Processor.run(p.thumbSrc, { ...p.s, upscale: false }, { maxDim: 360, cache: p.cache, preMax: 420 });
         p.thumb = r.canvas;
         updateThumbCanvas(p);
       } catch (e) { console.warn('thumb', e); }
