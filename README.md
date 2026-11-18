@@ -410,3 +410,18 @@ Bundled locally in `vendor/` (nothing is loaded from a CDN at run time except OC
 | [Noto Sans Bengali](https://fonts.google.com/noto) | Embedding Bangla OCR text | SIL OFL 1.1 |
 
 Add your own `LICENSE` file for this project's code before publishing it.
+
+---
+
+## Author
+
+**Created and maintained by Tashrif Rashid Sourav**
+
+| | |
+|---|---|
+| ✉️ Email | [tashrifrashid.sourav@gmail.com](mailto:tashrifrashid.sourav@gmail.com) |
+| 💼 LinkedIn | [linkedin.com/in/tashrif-rashid-sourav](https://www.linkedin.com/in/tashrif-rashid-sourav/) |
+
+Found a bug, a site that stopped working, or have an idea for a feature? Send an email and attach the `i2p-capture-log.json` or `i2p-inspect-<site>.json` file from the [debug tools](#debug-tools) if you have one.
+
+© 2026 Tashrif Rashid Sourav. All rights reserved unless a `LICENSE` file says otherwise.
