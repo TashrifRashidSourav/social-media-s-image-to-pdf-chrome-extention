@@ -33,7 +33,8 @@ A browser extension for **Microsoft Edge** and Google Chrome (and other Chromium
 13. [Development](#development)
 14. [Known limitations](#known-limitations)
 15. [Third-party software](#third-party-software)
-16. [Author](#author)
+16. [License](#license)
+17. [Author](#author)
 
 ---
 
@@ -360,6 +361,7 @@ mainlogo.png          Project logo (transparent PNG)
 vendor/               Bundled libraries, OCR engine and OCR language data
 store/                Edge Add-ons listing text (STORE_LISTING.md) and store graphics (not part of the package)
 tools/package.js      Builds the upload ZIP into dist/
+LICENSE               Proprietary licence (all rights reserved, source viewable)
 PRIVACY.md            Privacy policy
 THIRD_PARTY_NOTICES.md  Licences of bundled software
 ```
@@ -404,6 +406,19 @@ Everything below is bundled in `vendor/`. See **[THIRD_PARTY_NOTICES.md](THIRD_P
 
 ---
 
+## License
+
+**All rights reserved — source viewable.** See [LICENSE](LICENSE) for the full terms.
+
+- ✅ You may **read** the code and **install and use** the official extension for free.
+- ❌ You may **not** copy, modify, redistribute or sell it, and you may **not** publish it (or anything derived from it) in any extension store or website under any name.
+- The bundled third-party libraries in `vendor/` keep their own open-source licences (see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
+- Want to use or build on it? Just ask — contact details are below.
+
+Spotted a copy of this extension published without permission? Please email the author.
+
+---
+
 ## Author
 
 **Created and maintained by Tashrif Rashid Sourav**
@@ -415,4 +430,4 @@ Everything below is bundled in `vendor/`. See **[THIRD_PARTY_NOTICES.md](THIRD_P
 
 Found a bug, a site that stopped working, or have an idea for a feature? Send an email.
 
-© 2026 Tashrif Rashid Sourav. All rights reserved unless a `LICENSE` file says otherwise.
+© 2026 Tashrif Rashid Sourav. All rights reserved. See [LICENSE](LICENSE).

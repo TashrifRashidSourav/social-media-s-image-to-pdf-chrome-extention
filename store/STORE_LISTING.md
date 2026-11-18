@@ -165,7 +165,7 @@ The screenshots show the real extension running on sample pages created for the 
 ## 8. Pre-submission checklist
 
 - [ ] Public **privacy policy URL** is live (host `PRIVACY.md`).
-- [ ] Add a real `LICENSE` file if you want to publish the source (the README currently says "All rights reserved").
+- [x] `LICENSE` file added (all rights reserved, source viewable).
 - [ ] Install the **unzipped package** once in Edge (`edge://extensions` → Developer mode → Load unpacked) and try: hover button, drag-select, editor, PDF download.
 - [ ] Reload and confirm the toolbar icon shows your logo.
 - [ ] Upload `dist/image-to-pdf-scanner-1.0.0.zip`.

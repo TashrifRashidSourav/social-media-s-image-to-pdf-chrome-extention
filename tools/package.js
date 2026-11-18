@@ -23,7 +23,7 @@ const INCLUDE = [
   'process.js', 'cvsandbox.html', 'sandbox-cv.js',
   'export.js', 'db.js',
   'icons', 'vendor',
-  'PRIVACY.md', 'THIRD_PARTY_NOTICES.md',
+  'LICENSE', 'PRIVACY.md', 'THIRD_PARTY_NOTICES.md',
 ];
 
 const zip = new JSZip();

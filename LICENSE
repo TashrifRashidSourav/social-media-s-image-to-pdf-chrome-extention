@@ -1,0 +1,63 @@
+Image to PDF Scanner — Proprietary License (All Rights Reserved, Source Viewable)
+
+Copyright (c) 2026 Tashrif Rashid Sourav. All rights reserved.
+
+1. OWNERSHIP
+   The source code, design, text, logo, icons, store graphics and all other original
+   material in this repository and in the "Image to PDF Scanner" browser extension
+   (together, the "Software") are the property of Tashrif Rashid Sourav ("the Author")
+   and are protected by copyright law. No ownership is transferred to you.
+
+2. WHAT YOU MAY DO
+   a. View and read the source code in this repository, for example to learn from it,
+      review its security and privacy behaviour, or report a problem.
+   b. Install and use the official extension, as published by the Author in a browser
+      extension store or released by the Author on GitHub, for your own personal or
+      internal business use, free of charge.
+   c. Do whatever the GitHub Terms of Service allow for public repositories on GitHub
+      (viewing, and forking within GitHub for the purpose of proposing changes back to
+      this repository).
+
+3. WHAT YOU MAY NOT DO without the Author's prior written permission
+   a. Copy, redistribute, sell, sublicense, rent or lend the Software or any part of it.
+   b. Publish the Software, or anything derived from it, in any extension store or app
+      store (including the Microsoft Edge Add-ons store, the Chrome Web Store, the
+      Firefox Add-ons site or any other marketplace), or on any website, under any name,
+      whether or not you change it.
+   c. Modify the Software or create derivative works based on it, other than changes
+      you propose back to the Author through this repository.
+   d. Remove or alter copyright notices, the Author's name, or this licence.
+   e. Use the name "Image to PDF Scanner", the logo, or the Author's name in a way that
+      suggests your product is the Author's product or is endorsed by the Author.
+   f. Use the Software to build a competing or substantially similar product.
+
+4. THIRD-PARTY COMPONENTS
+   The "vendor" folder contains third-party open-source software (OpenCV.js, Tesseract.js,
+   Tesseract language data, jsPDF, JSZip, Noto Sans Bengali). It is NOT covered by this
+   licence. Each component remains under its own licence, listed in THIRD_PARTY_NOTICES.md
+   and reproduced in vendor/licenses/. Nothing in this licence restricts your rights under
+   those licences for those components alone.
+
+5. CONTRIBUTIONS
+   If you send the Author a suggestion, bug fix or pull request, you grant the Author a
+   perpetual, worldwide, royalty-free right to use, modify and include it in the Software
+   under any terms, without obligation to you.
+
+6. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+   CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   SOFTWARE OR ITS USE.
+
+7. TERMINATION
+   This licence ends automatically if you breach it. On termination you must stop using
+   and delete every unauthorised copy of the Software.
+
+8. REPORTING COPIES
+   If you find a copy or derivative of the Software published without permission, please
+   tell the Author. The Author may request its removal from any website or store.
+
+9. PERMISSION AND CONTACT
+   To ask for permission to do anything not allowed above, contact:
+   Tashrif Rashid Sourav — tashrifrashid.sourav@gmail.com
