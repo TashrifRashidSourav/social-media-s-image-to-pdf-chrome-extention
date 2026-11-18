@@ -584,7 +584,7 @@
     const r = await sendEntries(urls);
     if ((expected > 1 && urls.length < expected && !limit) || urls.length <= 1) {
       dumpLog(log, viewer);
-      toast('Captured ' + urls.length + (expected ? ' of ~' + expected : '') + ' images. A debug log (i2p-capture-log.json) was downloaded: please send it to me.', true);
+      toast('Captured ' + urls.length + (expected ? ' of ~' + expected : '') + ' images. A debug log (i2p-capture-log.json) was downloaded: attach it when you report the problem.', true);
     }
     return r;
   }
