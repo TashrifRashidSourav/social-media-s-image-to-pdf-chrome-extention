@@ -59,6 +59,11 @@ for (const r of referenced) {
 
 INCLUDE.forEach(add);
 
+// The Edge Add-ons validator rejects packages that contain archives inside the ZIP.
+const ARCHIVE = /\.(gz|tgz|zip|rar|7z|tar|bz2|xz|lz|lzma|cab|jar)$/i;
+const nested = Object.keys(zip.files).filter((n) => ARCHIVE.test(n));
+if (nested.length) throw new Error('Package contains compressed archive files (the store will reject it): ' + nested.join(', '));
+
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 const out = path.join(root, 'dist', 'image-to-pdf-scanner-' + version + '.zip');
 zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX' }).then((buf) => {

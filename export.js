@@ -20,6 +20,7 @@
       workerBlobURL: false,
       langPath: chrome.runtime.getURL('vendor/lang'),   // language data ships inside the extension (no network)
       cacheMethod: 'none',
+      gzip: false,                                      // plain .traineddata files (the store rejects archives inside the package)
       logger: (m) => onProgress && onProgress(m),
     });
     ocrLangs = langs;
