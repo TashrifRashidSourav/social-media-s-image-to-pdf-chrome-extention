@@ -19,6 +19,8 @@ document.getElementById('editor').onclick = async () => {
   window.close();
 };
 
+chrome.storage.local.get('theme').then((r) => { const t = r && r.theme; if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); }).catch(() => {});
+chrome.storage.local.get('devMode').then((r) => { if (r && r.devMode) document.getElementById('inspect').hidden = false; }).catch(() => {});
 chrome.runtime.sendMessage({ type: 'count' }).then((r) => {
   document.getElementById('count').textContent = (r && r.total) || 0;
 });

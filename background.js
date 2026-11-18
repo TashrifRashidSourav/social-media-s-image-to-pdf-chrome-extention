@@ -188,7 +188,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 /* ---- trusted input via the debugger API (fallback when a site ignores synthetic clicks) ---- */
 const dbgTabs = new Map(); // tabId -> auto-detach timer
+let dbgListenerSet = false;
+// The debugger permission is optional: the user turns it on in Settings > Compatibility mode.
+async function dbgAllowed() {
+  try { return !!chrome.debugger && await chrome.permissions.contains({ permissions: ['debugger'] }); } catch (e) { return false; }
+}
 async function dbgAttach(tabId) {
+  if (!(await dbgAllowed())) throw new Error('permission');
+  if (!dbgListenerSet) {
+    dbgListenerSet = true;
+    chrome.debugger.onDetach.addListener((src) => { if (src.tabId) dbgTabs.delete(src.tabId); });
+  }
   if (!dbgTabs.has(tabId)) {
     try { await chrome.debugger.attach({ tabId }, '1.3'); }
     catch (e) { if (!/already attached/i.test(String(e.message))) throw e; }
@@ -200,9 +210,8 @@ async function dbgDetach(tabId) {
   if (!dbgTabs.has(tabId)) return;
   clearTimeout(dbgTabs.get(tabId));
   dbgTabs.delete(tabId);
-  try { await chrome.debugger.detach({ tabId }); } catch (e) {}
+  try { if (chrome.debugger) await chrome.debugger.detach({ tabId }); } catch (e) {}
 }
-chrome.debugger.onDetach.addListener((src) => { if (src.tabId) dbgTabs.delete(src.tabId); });
 const send = (tabId, method, params) => chrome.debugger.sendCommand({ tabId }, method, params);
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {

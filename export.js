@@ -18,6 +18,8 @@
       workerPath: chrome.runtime.getURL('vendor/worker.min.js'),
       corePath: chrome.runtime.getURL('vendor/tesseract-core'),
       workerBlobURL: false,
+      langPath: chrome.runtime.getURL('vendor/lang'),   // language data ships inside the extension (no network)
+      cacheMethod: 'none',
       logger: (m) => onProgress && onProgress(m),
     });
     ocrLangs = langs;

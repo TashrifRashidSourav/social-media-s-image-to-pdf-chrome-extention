@@ -126,6 +126,14 @@
   }
 
   /* ------------------------------------------------- post / viewer logic */
+  // Developer mode (Settings): console logging, capture-log download, page inspector. Off for normal users.
+  let DEV = false;
+  try {
+    chrome.storage.local.get('devMode').then((r) => { DEV = !!(r && r.devMode); }).catch(() => {});
+    chrome.storage.onChanged.addListener((c) => { if (c.devMode) DEV = !!c.devMode.newValue; });
+  } catch (e) { /* storage unavailable */ }
+  let needDbgPerm = false;   // set when a real-input fallback was refused because Compatibility mode is off
+
   let lastTarget = null; // last hovered big <img>
   let lastPost = null;
 
@@ -343,10 +351,12 @@
   async function trustedClick(el) {
     const p = pointOn(el);
     const res = await chrome.runtime.sendMessage({ type: 'dbg-click', x: p.x, y: p.y });
+    if (res && res.error === 'permission') needDbgPerm = true;
     return !!(res && res.ok);
   }
   async function trustedKey(k) {
     const res = await chrome.runtime.sendMessage({ type: 'dbg-key', key: k });
+    if (res && res.error === 'permission') needDbgPerm = true;
     return !!(res && res.ok);
   }
 
@@ -372,7 +382,7 @@
       return m && +m[1] >= 1 && +m[2] >= +m[1] && +m[2] <= 200 ? +m[2] : 0;
     };
     const log = [];
-    const L = (msg, extra) => { log.push({ t: Math.round(performance.now()), msg, ...(extra || {}) }); console.log('[i2p]', msg, extra || ''); };
+    const L = (msg, extra) => { log.push({ t: Math.round(performance.now()), msg, ...(extra || {}) }); if (DEV) console.log('[i2p]', msg, extra || ''); };
     const isWA = /whatsapp\.com$/.test(location.hostname);
     const isTG = /(^|\.)telegram\.org$/.test(location.hostname);
     const isChat = isWA || isTG || /(^|\.)messenger\.com$/.test(location.hostname) || (/facebook\.com$/.test(location.hostname) && /^\/messages/.test(location.pathname));
@@ -574,7 +584,7 @@
       return;
     }
     if (viewerFailed && expected > tiles.length) {
-      toast('Only ' + urls.length + ' of ~' + expected + ' images captured: the image viewer was not detected. Open the first image yourself, then click Whole post again (or use Inspect and send me the file).', true);
+      toast('Only ' + urls.length + ' of ~' + expected + ' images captured: the photo viewer could not be opened automatically. Open the first photo yourself, then click Whole post again.' + (needDbgPerm ? ' Tip: turn on Compatibility mode in Settings (⚙ in the editor) so this works automatically.' : ''), true);
       await sendEntries(urls);
       dumpLog(log, viewer);
       return;
@@ -584,7 +594,7 @@
     const r = await sendEntries(urls);
     if ((expected > 1 && urls.length < expected && !limit) || urls.length <= 1) {
       dumpLog(log, viewer);
-      toast('Captured ' + urls.length + (expected ? ' of ~' + expected : '') + ' images. A debug log (i2p-capture-log.json) was downloaded: attach it when you report the problem.', true);
+      toast('Captured ' + urls.length + (expected ? ' of ~' + expected : '') + ' images.' + (DEV ? ' A log (i2p-capture-log.json) was downloaded.' : '') + (needDbgPerm ? ' Tip: turn on Compatibility mode in Settings (⚙ in the editor) to capture the rest.' : ''), true);
     }
     return r;
   }
@@ -700,6 +710,7 @@
   }
 
   function dumpLog(log, viewer) {
+    if (!DEV) return;
     try {
       const extra = viewer ? {
         viewerImgs: [...viewer.querySelectorAll('img')].slice(0, 8).map((i) => ({ src: (i.currentSrc || i.src).slice(0, 140), disp: Math.round(i.getBoundingClientRect().width) + 'x' + Math.round(i.getBoundingClientRect().height), nat: i.naturalWidth + 'x' + i.naturalHeight })),
@@ -894,7 +905,7 @@
     if (msg.type === 'capture-post-at-last-target') captureAtLastTarget();
     else if (msg.type === 'start-drag-select') startDragSelect();
     else if (msg.type === 'capture-all-page') captureAllOnPage();
-    else if (msg.type === 'inspect') inspect();
+    else if (msg.type === 'inspect' && DEV) inspect();
     sendResponse({ ok: true });
     return true;
   });

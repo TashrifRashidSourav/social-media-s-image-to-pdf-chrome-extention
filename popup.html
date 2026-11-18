@@ -13,12 +13,12 @@
 </style>
 </head>
 <body>
-  <h1>📄 Image to PDF Scanner</h1>
+  <h1 style="display:flex;align-items:center;gap:8px"><img src="icons/icon32.png" width="26" height="26" alt="" style="border-radius:6px"> Image to PDF Scanner</h1>
   <button class="big" id="post">📌 Capture whole post (all images)</button>
   <button class="big" id="drag">▭ Drag-select images on page</button>
   <button class="big" id="all">🖼 Add all large images on page</button>
   <button class="big primary" id="editor"><span class="row"><span>🗂 Open basket &amp; editor</span><span id="count">0</span></span></button>
-  <button class="big" id="inspect">🔍 Inspect page (debug report)</button>
+  <button class="big" id="inspect" hidden>🔍 Inspect page (developer)</button>
   <div class="small">Tip: hover over any image to get a <b>＋ PDF</b> / <b>Whole post</b> button.<br>
   Shortcuts: Alt+Shift+C capture post · Alt+Shift+S drag-select · Alt+Shift+E editor</div>
 <script src="popup.js"></script>

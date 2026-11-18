@@ -1,4 +1,4 @@
-// Image processing pipeline (CamScanner-like) built on OpenCV.js.
+// Image processing pipeline (document-scanner style) built on OpenCV.js.
 (function (root) {
   let cvReady = null;
 

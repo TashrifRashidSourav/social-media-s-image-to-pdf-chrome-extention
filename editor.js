@@ -212,10 +212,10 @@
       cv.getContext('2d').drawImage(out, 0, 0);
       let note = `Original ${p.w}×${p.h}px`;
       if (!showOriginal) {
-        note += ` → output ${Math.round(out.width / p.prev.width * Math.min(p.w, 1600) )}px preview`;
+        note += ` → preview ${out.width}×${out.height}px`;
         if (p.s.quad) note += ' · manual crop';
         else if (p.s.autocrop) note += auto ? (auto.quad ? ' · page outline detected' : ' · margins trimmed') : ' · no clear edges found (use ✂ Crop to set manually)';
-        if (Math.max(p.w, p.h) < 900) note += ' · low resolution: try “Smart upscale”';
+        if (Math.max(p.w, p.h) < 900 && !p.s.upscale) note += ' · low resolution: turn on “HD upscale”';
       }
       $('info').textContent = note;
     } catch (e) {
@@ -553,31 +553,6 @@
     } catch (e) { alert('OCR failed: ' + e.message); } finally { Exporter.ocrShutdown(); hideProgress(); }
   };
 
-  $('btnDrive').onclick = async () => {
-    const clientId = await store.get('clientId', '');
-    if (!clientId) { alert('Add your Google OAuth Client ID in ⚙ Settings first.'); $('settingsModal').hidden = false; return; }
-    const r = await makePdf(); if (!r) return;
-    try {
-      const redirect = chrome.identity.getRedirectURL();
-      const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-        client_id: clientId, response_type: 'token', redirect_uri: redirect, scope: 'https://www.googleapis.com/auth/drive.file',
-      });
-      const resp = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
-      const token = new URLSearchParams(new URL(resp).hash.slice(1)).get('access_token');
-      if (!token) throw new Error('No access token returned');
-      const boundary = 'i2p' + Math.random().toString(36).slice(2);
-      const metaPart = JSON.stringify({ name: fname('.pdf'), mimeType: 'application/pdf' });
-      const body = new Blob([`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metaPart}\r\n--${boundary}\r\nContent-Type: application/pdf\r\n\r\n`, r.blob, `\r\n--${boundary}--`]);
-      const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
-        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'multipart/related; boundary=' + boundary }, body,
-      });
-      if (!up.ok) throw new Error('Drive HTTP ' + up.status);
-      const j = await up.json();
-      $('info').innerHTML = 'Uploaded to Google Drive. <a target="_blank" href="' + j.webViewLink + '">Open file</a>';
-      saveHistory(r.blob, r.count);
-    } catch (e) { alert('Drive upload failed: ' + e.message); }
-  };
-
   /* ------------------------------------------------- history & settings */
   $('btnHistory').onclick = async () => {
     const h = await DB.getHistory();
@@ -599,16 +574,28 @@
     if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
     else document.documentElement.removeAttribute('data-theme');
   }
+  const hasDbg = async () => { try { return await chrome.permissions.contains({ permissions: ['debugger'] }); } catch (e) { return false; } };
   $('btnSettings').onclick = async () => {
     $('theme').value = await store.get('theme', 'auto');
-    $('clientId').value = await store.get('clientId', '');
-    $('redirectUri').textContent = chrome.identity.getRedirectURL();
+    $('devMode').checked = !!(await store.get('devMode', false));
+    $('compat').checked = await hasDbg();
     $('settingsModal').hidden = false;
   };
   $('setClose').onclick = () => ($('settingsModal').hidden = true);
   $('setSave').onclick = async () => {
-    await store.set('theme', $('theme').value); await store.set('clientId', $('clientId').value.trim());
-    applyTheme($('theme').value); $('settingsModal').hidden = true;
+    // the permission prompt needs the click's user gesture, so ask for it first
+    const want = $('compat').checked, have = await hasDbg();
+    if (want && !have) {
+      let ok = false;
+      try { ok = await chrome.permissions.request({ permissions: ['debugger'] }); } catch (e) { ok = false; }
+      if (!ok) { $('compat').checked = false; alert('Compatibility mode was not enabled (permission not granted).'); }
+    } else if (!want && have) {
+      try { await chrome.permissions.remove({ permissions: ['debugger'] }); } catch (e) {}
+    }
+    await store.set('theme', $('theme').value);
+    await store.set('devMode', $('devMode').checked);
+    applyTheme($('theme').value);
+    $('settingsModal').hidden = true;
   };
   document.querySelectorAll('.modal').forEach((m) => m.addEventListener('mousedown', (e) => { if (e.target === m) m.hidden = true; }));
 

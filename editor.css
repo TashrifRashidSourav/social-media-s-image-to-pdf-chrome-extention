@@ -8,7 +8,8 @@ code { background: var(--hover); padding: 1px 5px; border-radius: 5px; word-brea
   display: flex; align-items: center; gap: 8px; padding: 8px 14px;
   background: var(--panel); border-bottom: 1px solid var(--border); flex-wrap: wrap;
 }
-.brand { font-weight: 700; margin-right: 8px; }
+.brand { font-weight: 700; margin-right: 8px; display: flex; align-items: center; gap: 8px; }
+.brand img { border-radius: 6px; }
 .spacer { flex: 1; }
 
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: 210px 1fr 320px; }

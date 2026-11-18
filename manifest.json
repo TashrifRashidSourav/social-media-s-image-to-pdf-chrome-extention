@@ -1,12 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Image to PDF Scanner",
+  "short_name": "Image to PDF",
   "version": "1.0.0",
-  "description": "Capture all images of a LinkedIn/Facebook (or any) post, clean them up like CamScanner, and export a page-by-page PDF.",
-  "permissions": ["activeTab", "scripting", "storage", "contextMenus", "downloads", "identity", "unlimitedStorage", "debugger"],
+  "description": "Turn images from posts, chats and web pages into a clean, page-by-page PDF. Auto-crop, enhance and OCR, all offline.",
+  "minimum_chrome_version": "110",
+  "permissions": ["scripting", "storage", "contextMenus"],
+  "optional_permissions": ["debugger"],
   "host_permissions": ["<all_urls>"],
   "background": { "service_worker": "background.js" },
-  "action": { "default_title": "Image to PDF", "default_popup": "popup.html" },
+  "action": {
+    "default_title": "Image to PDF Scanner",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -35,6 +42,5 @@
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
     "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; object-src 'self'"
   },
-  "web_accessible_resources": [],
-  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
 }
